@@ -29,6 +29,9 @@ class Watcher:
 	def getArguments(self):
 		description = "Run a command when a file changes."
 		epilog = textwrap.dedent('''\
+			Watch: a utility for acting on file changes.
+			Copyright (c) 2012, Peter Swire - swirepe.com
+
 			Examples:
 			    watch --file readme.md --cmd "pandoc readme.md -o readme.html"
 
