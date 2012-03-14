@@ -1,191 +1,93 @@
-import os, glob
+# Peter Swire, 2012
+# swirepe.com
+# this is basically tail -f, but for arbitrary commands
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
-import textwrap
-from multiprocessing import Process, Queue
-import time
+import glob
+from multiprocessing import Process
+import os
 from subprocess import Popen
 import shlex
-import tempfile
-import socket
-import pickle
 import sys
-
-# basically:
-# watch --file a.md --cmd "pandoc -o a.html a.md"
+import textwrap
+import time
+import signal
 
 # check for changes every second
 POLLING_INTERVAL = 1
-PORT = 5219
-
-
-
-def getArguments():
-	description = "Run a command when a file changes."
-	epilog = textwrap.dedent('''\
-		example:
-		    watch --file readme.md --cmd "pandoc readme.md -o readme.html"
-		''')
-	
-	parser = ArgumentParser(prog="watch", formatter_class=RawDescriptionHelpFormatter, description=description, epilog=epilog)
-	parser.add_argument("-f", "--file", action="store",  required=True, nargs='+', help="The file to watch.")
-	parser.add_argument("-c", "--cmd", action="store", required=True, help="The command to run when the file changes.  This should be a quoted string.")
-	parser.add_argument("-s", "--stop", action="store_true", help="Stop watching files.")
-	parser.add_argument("-l", "--list", action="store_true", help="List the files being watched and the commands that run when they change.")
-	return parser.parse_args()
-
-
-
-def formatArgs(arguments):
-	# make sure the file exists
-	# turn the file into an absolute path
-	# should we save the environment too?
-	if arguments.list:
-		return "list"
-
-	if arguments.stop:
-		return "stop"
-
-	files = arguments.file
-	newf = []
-	for f in files:
-		newf.extend(glob.glob(f))
-	files = map(os.path.abspath,newf)
-
-	for f in files:
-		if not os.path.isfile(f):
-			raise Exception("Error:", f, "doesn't exist")
-
-	cmd = arguments.cmd
-	bundle = [{f: cmd} for f in files]
-	return bundle
-
-
-
-def watcherFilePath():
-	temporaryDir = tempfile.gettempdir()
-	return os.path.join(temporaryDir, "watcherpid")
-
-
-def isAlreadyRunning():
-	# see if the watcherpid file is in the temporary directory
-	return os.path.isfile(watcherFilePath())
-
-
-
-def startBackgroundProcess():
-	watcherObj = Watcher()
-	p = Process(target=watcherObj)
-	p.start()
-
-
-
-def addToBackgroundProcess(args):
-	# set up socket business
-	global PORT
-	address = ("localhost", PORT)
-	client = socket.socket( socket.AF_INET, socket.SOCK_STREAM)
-	client.connect((address))
-
-	if args in ["halt", "list"]:
-		client.send(pickle.dumps(args))
-	else:
-		for pair in args:
-			client.send(pickle.dumps(pair))
-
-
-
-
-
-
-def run():
-	args = getArguments()
-	fmt = formatArgs(args)
-
-	#if not isAlreadyRunning():
-	startBackgroundProcess()
-
-	#addToBackgroundProcess(fmt)
 
 
 class Watcher:
 	def __init__(self):
-		# file -> cmd
-		self.watching = {"test": "ping google.com"}
-
-		# file -> modification time
+		self.watching = {}
 		self.mod_times = {}
 
-		#self.setupServer()
-		self.holdMarkerFile()
+		args = self.getArguments()
+		self.formatAndAddArgs(args)
+		self.run()
 
 
-	def holdMarkerFile(self):
+	def getArguments(self):
+		description = "Run a command when a file changes."
+		epilog = textwrap.dedent('''\
+			Examples:
+			    watch --file readme.md --cmd "pandoc readme.md -o readme.html"
+
+			    watch -f somelog.txt -c "cat somelog.txt"
+
+			    watch --file *.c *.h --cmd "make"
+			''')
 		
-		# hold onto the file handle forever, basically
-		self._hold = open(watcherFilePath(), "w")
-		self._hold.write(str(os.getpid()))
-	
+		parser = ArgumentParser(prog="watch", formatter_class=RawDescriptionHelpFormatter, description=description, epilog=epilog)
+		parser.add_argument("-f", "--file", action="store",  required=True, nargs='+', help="The file(s) to watch.")
+		parser.add_argument("-c", "--cmd", action="store", required=True, help="The command to run when the file(s) changes.  This should be a quoted string.")
+		parser.add_argument("-i", "--interval", default=POLLING_INTERVAL, action="store", help="The interval to check the file(s) at, in seconds.", type=float)
+		parser.add_argument("-a", "--absolute", action="store_true", help="Guess the absolute paths of the files being watched.")
+		parser.add_argument("-v", "--verbose", action="count", help="Output file names and commands as they are run.")
+		return parser.parse_args()
 
 
-	def stop(self):
-		# close and remove that file, showing that we are done
-		self._hold.close()
-		os.unlink(watcherFilePath())
-
-		sys.exit(0)
-
-		
-
-
-
-	def setupServer(self):
-		print "got here!"
-		"""This is going to be a locally-running server"""
-		global PORT
-
-		server_address = ('localhost', PORT)
-
-		def getter():
-			server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			server.bind((server_address))
-
-			while True:
-				server.listen(5)
-				conn, addr = server.accept()
-				data = conn.recv(4096)
-				self.process(data)
-
-
-		p = Process(target=getter)
-		p.start()
-		p.join()
-
-
-	def process(self, data):
-		"""all data is coming in pickled"""
-		data = pickle.loads(data)
-		if data == "stop":
-			self.stop()
-		elif data == "list":
-			self.list()
-		else:
-			self.watching[data["file"]] = data["cmd"]
-
-
-	def list(self):
-		print "Watching these files with these commands:"
-		for k,v in self.watching.iteritems():
-			print k, v
-
-
-
-
-	def __call__(self):
+	def formatAndAddArgs(self, arguments):
+		# make sure the file exists
+		# turn the file into an absolute path
 		global POLLING_INTERVAL
+		POLLING_INTERVAL = arguments.interval
 
+		self.verbose = arguments.verbose
+
+
+		files = arguments.file
+		newf = []
+		for f in files:
+
+			if self.verbose >= 2:
+				print textwrap.fill("[pre] Expanding " + str(f) + " -> " + ", ".join(glob.glob(f)), initial_indent='', subsequent_indent='    ')
+
+			newf.extend(glob.glob(f))
+
+		files = newf
+		
+		if arguments.absolute:
+			files = map(os.path.abspath,files)
+
+			if self.verbose >= 2:
+				print "[pre] Expanded paths:"
+				print "    " + "\n    ".join(files)
+
+		for f in files:
+			if not os.path.isfile(f):
+				raise Exception("Error:", f, "doesn't exist")
+
+		cmd = arguments.cmd
+		for f in files:
+			self.watching[f] = cmd
+
+
+		
+
+
+
+	def run(self):
 		while True:
-			time.sleep(POLLING_INTERVAL)
-
 			for f in self.watching.keys():
 				# initial case: we don't have a date for these things
 				if not self.mod_times.has_key(f):
@@ -194,11 +96,27 @@ class Watcher:
 					m = os.stat(f).st_mtime
 					if m > self.mod_times[f]:
 						self.mod_times[f] = m
-						print "The file", f, "has changed!"
-						#Popen(shlex.split(self.watching[f]))
+
+						# verbose output stuff
+						if self.verbose >= 1:
+							now = time.gmtime()
+							strnow = "[" + time.strftime("%Y-%m-%d %H:%M:%S", now) + "]"
+
+							output = strnow + " File " + f + " has changed."
+							if self.verbose >= 2:
+								output += "  Running '" + self.watching[f] + "'"
+							print textwrap.fill(output, initial_indent='', subsequent_indent='    ')
+
+
+						Popen(shlex.split(self.watching[f]))
+
 
 
 
 
 if __name__ == "__main__":
-	run()
+	try:
+		w = Watcher()
+	except KeyboardInterrupt:
+		print "\n"
+		sys.exit(0)
