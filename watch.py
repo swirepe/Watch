@@ -77,7 +77,7 @@ class Watcher:
 				print "    " + "\n    ".join(files)
 
 		for f in files:
-			if not os.path.isfile(f):
+			if not (os.path.isfile(f) or os.path.isdir(f)):
 				raise Exception("Error:", f, "doesn't exist")
 
 		cmd = arguments.cmd
