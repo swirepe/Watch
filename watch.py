@@ -82,7 +82,7 @@ class Watcher:
 			if not (os.path.isfile(f) or os.path.isdir(f)):
 				raise Exception("Error:", f, "doesn't exist")
 
-		self.cmd = shlex.split(arguments.cmd)
+		self.cmd = shlex.split(arguments.cmd[0])
 
 
 
