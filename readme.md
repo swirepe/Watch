@@ -24,6 +24,8 @@ A small utility for acting on file changes
 
 	    watch --file *.c *.h --cmd "make"
 
+	    watch -f ./experiments --cmd "echo experiment done!
+
 
 Exe built with [py2exe] downloaded from [here.](http://www.lfd.uci.edu/~gohlke/pythonlibs/#py2exe)
 
