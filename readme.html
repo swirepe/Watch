@@ -7,7 +7,7 @@ Run a command when a file changes.
 optional arguments:
   -h, --help            show this help message and exit
   -f FILE [FILE ...], --file FILE [FILE ...]
-                        The file(s) to watch.
+                        The file(s) or directories to watch.
   -c CMD, --cmd CMD     The command to run when the file(s) changes. 
                         This should be a quoted string.
   -i INTERVAL, --interval INTERVAL
@@ -20,7 +20,9 @@ Examples:
 
     watch -f somelog.txt -c &quot;cat somelog.txt&quot;
 
-    watch --file *.c *.h --cmd &quot;make&quot;</code></pre>
+    watch --file *.c *.h --cmd &quot;make&quot;
+
+    watch -f ./experiments --cmd &quot;echo experiment done!&quot;</code></pre>
 <p>Exe built with <a href="http://www.py2exe.org/">py2exe</a> downloaded from <a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/#py2exe">here.</a></p>
 <p>Watch is released under the <a href="http://www.opensource.org/licenses/mit-license.html">MIT License</a>.</p>
 <p>Copyright (C) 2012 Peter Swire</p>

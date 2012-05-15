@@ -9,7 +9,7 @@ A small utility for acting on file changes
 	optional arguments:
 	  -h, --help            show this help message and exit
 	  -f FILE [FILE ...], --file FILE [FILE ...]
-	                        The file(s) to watch.
+	                        The file(s) or directories to watch.
 	  -c CMD, --cmd CMD     The command to run when the file(s) changes. 
 	                        This should be a quoted string.
 	  -i INTERVAL, --interval INTERVAL
@@ -24,7 +24,7 @@ A small utility for acting on file changes
 
 	    watch --file *.c *.h --cmd "make"
 
-	    watch -f ./experiments --cmd "echo experiment done!
+	    watch -f ./experiments --cmd "echo experiment done!"
 
 
 Exe built with [py2exe] downloaded from [here.](http://www.lfd.uci.edu/~gohlke/pythonlibs/#py2exe)

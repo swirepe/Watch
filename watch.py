@@ -3,7 +3,7 @@
 # this is basically tail -f, but for arbitrary commands
 
 from args import getArguments
-from files import watchFactory
+from files import watchFactory, checkExistance
 import glob
 import shlex
 from subprocess import Popen
@@ -27,8 +27,6 @@ class Watcher:
 		self.cmd = shlex.split(args.cmd[0])
 		self.watching = self.processFiles(args.file, args.absolute)
 
-		self.cmd = shlex.split(args.cmd[0])
-
 		verbose.startupReport(self.watching)
 
 
@@ -48,6 +46,8 @@ class Watcher:
 			files = map(os.path.abspath,files)
 
 
+		checkExistance(files)
+
 		# convert to the appropriate objects
 		files = map(watchFactory, files)
 		return files
@@ -55,6 +55,10 @@ class Watcher:
 
 
 	def run(self):
+		if self.watching == []:
+			print "[watch] No files to watch."
+			sys.exit(0)
+
 		global POLLING_INTERVAL
 		while True:
 			time.sleep(POLLING_INTERVAL)
@@ -72,3 +76,5 @@ if __name__ == "__main__":
 	except KeyboardInterrupt:
 		print "\n"
 		sys.exit(0)
+	except:
+		raise

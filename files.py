@@ -14,6 +14,11 @@ def watchFactory(path):
 	raise ValueError(path + " not found.")
 
 
+def checkExistance(files):
+	for f in files:
+		if not os.path.exists(f):
+			print "[watch] Warning - file does not exist:", f
+
 
 class File:
 	def __init__(self, path):
