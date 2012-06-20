@@ -27,6 +27,16 @@ A small utility for acting on file changes
 	    watch -f ./experiments --cmd "echo experiment done!"
 
 
+To Install:
+
+    sudo python setup.py install
+
+This installs it as `watch.py`, as to not conflict with any other commands named `watch`.
+
+To create a windows exe:
+
+    python setup.py py2exe
+
 Exe built with [py2exe] downloaded from [here.](http://www.lfd.uci.edu/~gohlke/pythonlibs/#py2exe)
 
 Watch is released under the [MIT License].

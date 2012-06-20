@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # Peter Swire, 2012
 # swirepe.com
 # this is basically tail -f, but for arbitrary commands
